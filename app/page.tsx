@@ -351,7 +351,7 @@ export default function Home() {
       }
     };
     loadData();
-  });
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
