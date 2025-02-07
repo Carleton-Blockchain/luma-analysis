@@ -2,18 +2,16 @@
 import { useEffect, useState } from "react";
 import { attendee, attendeeHistory } from "@/types/users";
 import { fetchAttendees, fetchRSVPs } from "@/db/event_queries";
-import { getHistory } from "@/db/history_queries";
-import { Users, UserCheck, UserPlus, Repeat, Clock } from "lucide-react";
-import { StatCard } from "@/components/statsCard";
 import { AttendanceChart } from "@/components/attendence";
 import { GuestTypeChart } from "@/components/guestType";
-import { CheckInDistribution } from "@/components/check-in-distribution";
+import { StatsCardsWidget } from "@/components/StatsCardsWidget";
+import { EventStatsWidget } from "@/components/EventStatsWidget";
+import { getRecurring } from "@/db/recurring_queries";
 
 export default function Home() {
   const [attendees, setAttendees] = useState<attendee[]>([]);
   const [RSVPs, setRSVPs] = useState<attendee[]>([]);
   const [missingAttendees, setMissingAttendees] = useState<attendee[]>([]);
-  const [attendeeHistory, setAttendeeHistory] = useState<attendeeHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [attendeesByEvent, setAttendeesByEvent] = useState<
     Record<string, attendee[]>
@@ -24,7 +22,10 @@ export default function Home() {
   const [totalNewMembers, setTotalNewMembers] = useState(0);
   const [totalRecurringMembers, setTotalRecurringMembers] = useState(0);
   const [eventStats, setEventStats] = useState<
-    Map<string, { new: number; recurring: number }>
+    Map<
+      string,
+      { new: number; recurring: number; recurringDetails?: attendee[] }
+    >
   >(new Map());
   const [attendanceStats, setAttendanceStats] = useState<{
     averageTime: string;
@@ -64,9 +65,9 @@ export default function Home() {
     const loadData = async () => {
       try {
         const events = [
-          "Blockchain 101", // First event
-          "Onchain Use Cases w Patrick", // Second event
-          "Boba and Blockchains", // Third event
+          "Boba and Blockchains", // Newest (index 0)
+          "Onchain Use Cases w Patrick", // Middle (index 1)
+          "Blockchain 101", // Oldest (index 2)
         ];
 
         const results = await Promise.all([
@@ -76,10 +77,15 @@ export default function Home() {
           fetchRSVPs(events[1]),
           fetchAttendees(events[2]),
           fetchRSVPs(events[2]),
-          //getHistory(),
+          getRecurring(events[2], []), // Blockchain 101 - first event, no previous events
+          getRecurring(events[1], [events[2]]), // Onchain - check against Blockchain 101
+          getRecurring(events[0], [events[1], events[2]]), // Boba - check against both previous
         ]);
 
-        // Split results into attendees and RSVPs by event
+        console.log(results[6]);
+        console.log(results[7]);
+        console.log(results[8]);
+
         const attendeesByEvent: Record<string, attendee[]> = {};
         const rsvpsByEvent: Record<string, attendee[]> = {};
 
@@ -87,7 +93,7 @@ export default function Home() {
           const attendeeIndex = index * 2;
           const rsvpIndex = attendeeIndex + 1;
 
-          attendeesByEvent[event] = results[attendeeIndex].map((row) => ({
+          attendeesByEvent[event] = results[attendeeIndex].map((row: any) => ({
             api_id: row.api_id,
             name: row.name,
             email: row.email,
@@ -95,7 +101,7 @@ export default function Home() {
             checked_in_at: row.checked_in_at,
           }));
 
-          rsvpsByEvent[event] = results[rsvpIndex].map((row) => ({
+          rsvpsByEvent[event] = results[rsvpIndex].map((row: any) => ({
             api_id: row.api_id,
             name: row.name,
             email: row.email,
@@ -121,61 +127,42 @@ export default function Home() {
 
         const eventStats = new Map<
           string,
-          { new: number; recurring: number }
+          { new: number; recurring: number; recurringDetails?: attendee[] }
         >();
 
-        // For the first event, all attendees are new
-        const firstEvent = events[0];
-        const firstEventAttendees = attendeesByEvent[firstEvent];
-        eventStats.set(firstEvent, {
-          new: firstEventAttendees.length,
-          recurring: 0,
-        });
+        // Process recurring data
+        const recurringEvent1 = results[8]; // Boba - recurring from both previous events
+        const recurringEvent2 = results[7]; // Onchain - recurring from Blockchain 101
+        const recurringEvent3 = results[6]; // Blockchain 101 - first event, all new
 
-        // For subsequent events, compare with previous event's attendees
-        for (let i = 1; i < events.length; i++) {
-          const currentEvent = events[i];
-          const previousEvent = events[i - 1];
-          const currentAttendees = attendeesByEvent[currentEvent];
-          const previousAttendees = attendeesByEvent[previousEvent];
+        const recurringByEvent = {
+          [events[0]]: recurringEvent1, // Boba and Blockchains
+          [events[1]]: recurringEvent2, // Onchain Use Cases
+          [events[2]]: recurringEvent3, // Blockchain 101
+        };
+
+        events.forEach((event, index) => {
+          const currentAttendees = attendeesByEvent[event];
+          const recurringAttendees = recurringByEvent[event];
 
           const stats = {
-            new: 0,
-            recurring: 0,
+            new: currentAttendees.length - recurringAttendees.length,
+            recurring: recurringAttendees.length,
+            recurringDetails: recurringAttendees,
           };
 
-          // Check each current attendee
-          currentAttendees.forEach((attendee) => {
-            const wasInPreviousEvent = previousAttendees.some(
-              (prevAttendee) => prevAttendee.api_id === attendee.api_id
-            );
-            if (wasInPreviousEvent) {
-              stats.recurring++;
-            } else {
-              stats.new++;
-            }
-          });
+          eventStats.set(event, stats);
+        });
 
-          eventStats.set(currentEvent, stats);
-        }
-
-        // Calculate totals
-        const totalNewMembers = Array.from(eventStats.values()).reduce(
-          (sum, stats) => sum + stats.new,
-          0
-        );
         const totalRecurringMembers = Array.from(eventStats.values()).reduce(
           (sum, stats) => sum + stats.recurring,
           0
         );
 
-        // After calculating eventStats, set it in state
         setEventStats(eventStats);
-
         setTotalNewMembers(totalNewMembers);
         setTotalRecurringMembers(totalRecurringMembers);
 
-        // Calculate attendance time statistics
         const calculateTimeStats = (checkinTimes: string[]) => {
           if (checkinTimes.length === 0) return null;
 
@@ -209,7 +196,6 @@ export default function Home() {
           };
         };
 
-        // Calculate overall stats
         const allCheckinTimes = allAttendees
           .filter((attendee) => attendee.checked_in_at)
           .map((attendee) => {
@@ -228,7 +214,6 @@ export default function Home() {
           latestTime: "",
         };
 
-        // Calculate per-event stats
         const eventTimeStats: Record<
           string,
           { averageTime: string; earliestTime: string; latestTime: string }
@@ -258,9 +243,6 @@ export default function Home() {
           ...overallStats,
           byEvent: eventTimeStats,
         });
-
-        console.log("Earliest time:", overallStats.earliestTime);
-        console.log("Latest time:", overallStats.latestTime);
 
         const getTimeDistribution = (attendees: attendee[]) => {
           const distribution: Record<string, number> = {};
@@ -387,98 +369,15 @@ export default function Home() {
           <div>Loading...</div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <StatCard
-                label="Total RSVPs"
-                value={RSVPs.length.toString()}
-                trend={0}
-                icon={<Users size={20} />}
-                tooltip="Total number of people who RSVP'd across all events"
-                breakdown={Object.entries(rsvpsByEvent).map(
-                  ([event, rsvps]) => ({
-                    event,
-                    count: rsvps.length,
-                  })
-                )}
-              />
-              <StatCard
-                label="Total Check-ins"
-                value={attendees.length.toString()}
-                trend={0}
-                icon={<UserCheck size={20} />}
-                tooltip="Total number of people who actually attended across all events"
-                breakdown={Object.entries(attendeesByEvent).map(
-                  ([event, attendees]) => ({
-                    event,
-                    count: attendees.length,
-                  })
-                )}
-              />
-              <StatCard
-                label="RSVP:Check-ins"
-                value={`${((attendees.length / RSVPs.length) * 100).toFixed(
-                  2
-                )}%`}
-                trend={0}
-                icon={<UserPlus size={20} />}
-                tooltip="Percentage of RSVPs who actually attended (total check-ins divided by total RSVPs)"
-                breakdown={Object.entries(rsvpsByEvent).map(
-                  ([event, rsvps]) => ({
-                    event,
-                    count: `${(
-                      (attendeesByEvent[event].length / rsvps.length) *
-                      100
-                    ).toFixed(2)}%`,
-                  })
-                )}
-              />
-              <StatCard
-                label="Return Rate"
-                value={`0`}
-                trend={0}
-                icon={<Repeat size={20} />}
-                tooltip="Percentage of attendees who came to multiple events"
-              />
-              <StatCard
-                label="New Members"
-                value={totalNewMembers.toString()}
-                trend={0}
-                icon={<UserPlus size={20} />}
-                tooltip="Number of first-time attendees across all events"
-              />
-              <StatCard
-                label="Recurring Members"
-                value={totalRecurringMembers.toString()}
-                trend={0}
-                icon={<Repeat size={20} />}
-                tooltip="Number of attendees who have attended multiple events"
-              />
-              <StatCard
-                label="Average Check-in Time"
-                value={attendanceStats.averageTime || "N/A"}
-                trend={0}
-                icon={<Clock size={20} />}
-                tooltip="Average time when attendees checked in across all events"
-                breakdown={[
-                  { event: "Earliest", count: attendanceStats.earliestTime },
-                  { event: "Latest", count: attendanceStats.latestTime },
-                ]}
-              />
-              <StatCard
-                label="On Time Attendance"
-                value={`${(
-                  (punctualityStats.onTime / attendees.length) *
-                  100
-                ).toFixed(0)}%`}
-                trend={0}
-                icon={<Clock size={20} />}
-                tooltip="Percentage of attendees who arrived before 6:15 PM"
-                breakdown={[
-                  { event: "On Time", count: punctualityStats.onTime },
-                  { event: "Late", count: punctualityStats.late },
-                ]}
-              />
-            </div>
+            <StatsCardsWidget
+              RSVPs={RSVPs}
+              attendees={attendees}
+              rsvpsByEvent={rsvpsByEvent}
+              attendeesByEvent={attendeesByEvent}
+              totalRecurringMembers={totalRecurringMembers}
+              attendanceStats={attendanceStats}
+              punctualityStats={punctualityStats}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <GuestTypeChart
@@ -491,102 +390,16 @@ export default function Home() {
             </div>
 
             {Object.entries(rsvpsByEvent).map(([event, rsvps]) => (
-              <div key={event} className="mb-8 bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  {event}
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                  <StatCard
-                    label="Event RSVPs"
-                    value={`${rsvps.length}`}
-                    trend={0}
-                    icon={<Users size={20} />}
-                    tooltip={`${rsvps.length} total RSVPs with ${(
-                      (attendeesByEvent[event].length / rsvps.length) *
-                      100
-                    ).toFixed(0)}% attendance rate`}
-                  />
-                  <StatCard
-                    label="Event Check-ins"
-                    value={attendeesByEvent[event].length.toString()}
-                    trend={0}
-                    icon={<UserCheck size={20} />}
-                    tooltip={`Total number of attendees who checked in at ${event}`}
-                  />
-                  <StatCard
-                    label="RSVP:Check-in Ratio"
-                    value={`${(
-                      (attendeesByEvent[event].length / rsvps.length) *
-                      100
-                    ).toFixed(2)}%`}
-                    trend={0}
-                    icon={<UserPlus size={20} />}
-                    tooltip={`Percentage of RSVPs who actually attended ${event}`}
-                  />
-                  <StatCard
-                    label="New Members"
-                    value={eventStats.get(event)?.new.toString() || "0"}
-                    trend={0}
-                    icon={<UserPlus size={20} />}
-                    tooltip={`Number of first-time attendees at ${event}`}
-                  />
-                  <StatCard
-                    label="Recurring Members"
-                    value={eventStats.get(event)?.recurring.toString() || "0"}
-                    trend={0}
-                    icon={<Repeat size={20} />}
-                    tooltip={`Number of attendees at ${event} who had attended previous events`}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mt-6">
-                  <StatCard
-                    label="Check-in Times"
-                    value={attendanceStats.byEvent[event]?.averageTime || "N/A"}
-                    trend={0}
-                    icon={<Clock size={20} />}
-                    tooltip={`Average check-in time for ${event}`}
-                    breakdown={[
-                      {
-                        event: "Earliest",
-                        count:
-                          attendanceStats.byEvent[event]?.earliestTime || "N/A",
-                      },
-                      {
-                        event: "Latest",
-                        count:
-                          attendanceStats.byEvent[event]?.latestTime || "N/A",
-                      },
-                    ]}
-                  />
-                  <StatCard
-                    label="Punctuality"
-                    value={`${(
-                      (punctualityStats.byEvent[event]?.onTime /
-                        attendeesByEvent[event].length) *
-                      100
-                    ).toFixed(0)}%`}
-                    trend={0}
-                    icon={<Clock size={20} />}
-                    tooltip={`Percentage of attendees who arrived before 6:15 PM at ${event}`}
-                    breakdown={[
-                      {
-                        event: "On Time",
-                        count: punctualityStats.byEvent[event]?.onTime || 0,
-                      },
-                      {
-                        event: "Late",
-                        count: punctualityStats.byEvent[event]?.late || 0,
-                      },
-                    ]}
-                  />
-                </div>
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4">
-                    Check-in Distribution
-                  </h3>
-                  <CheckInDistribution data={timeDistributionByEvent[event]} />
-                </div>
-              </div>
+              <EventStatsWidget
+                key={event}
+                event={event}
+                rsvps={rsvps}
+                attendees={attendeesByEvent[event]}
+                eventStats={eventStats.get(event)}
+                attendanceStats={attendanceStats.byEvent[event]}
+                punctualityStats={punctualityStats.byEvent[event]}
+                timeDistribution={timeDistributionByEvent[event]}
+              />
             ))}
           </>
         )}

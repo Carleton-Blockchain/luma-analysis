@@ -16,7 +16,7 @@ const data = [
 
 export const AttendanceChart = () => {
   return (
-    <div className="h-[300px] w-full bg-white rounded-xl p-6 shadow-sm">
+    <div className="h-[300px] w-full bg-white rounded-xl p-6 pb-14 shadow-sm">
       <h3 className="text-lg font-semibold mb-4">Attendance Trends</h3>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>

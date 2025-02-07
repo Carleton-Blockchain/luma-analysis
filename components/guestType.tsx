@@ -7,7 +7,6 @@ import {
   Tooltip,
 } from "recharts";
 
-// Define the type for our data structure
 interface GuestData {
   name: string;
   value: number;
@@ -20,12 +19,15 @@ interface GuestTypeChartProps {
 
 export const GuestTypeChart = ({
   data,
-  colors = ["#2563eb", "#64748b"], // Default colors if none provided
+  colors = ["#2563eb", "#64748b"],
 }: GuestTypeChartProps) => {
   return (
-    <div className="h-[300px] w-full bg-white rounded-xl p-6 shadow-sm">
+    <div
+      style={{ height: "300px" }}
+      className="w-full bg-white rounded-xl p-6 pb-16 shadow-sm mb-12"
+    >
       <h3 className="text-lg font-semibold mb-4">Guest Breakdown</h3>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={200}>
         <PieChart>
           <Pie
             data={data}

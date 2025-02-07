@@ -5,6 +5,7 @@ interface StatCardProps {
   value: string | number;
   trend?: number;
   icon?: React.ReactNode;
+  tooltip?: string;
   breakdown?: Array<{ event: string; count: string | number }>;
 }
 
