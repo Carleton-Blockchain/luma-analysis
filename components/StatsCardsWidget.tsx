@@ -7,7 +7,6 @@ interface StatsCardsWidgetProps {
   attendees: attendee[];
   rsvpsByEvent: Record<string, attendee[]>;
   attendeesByEvent: Record<string, attendee[]>;
-  totalNewMembers: number;
   totalRecurringMembers: number;
   attendanceStats: {
     averageTime: string;
@@ -25,7 +24,6 @@ export function StatsCardsWidget({
   attendees,
   rsvpsByEvent,
   attendeesByEvent,
-  totalNewMembers,
   totalRecurringMembers,
   attendanceStats,
   punctualityStats,

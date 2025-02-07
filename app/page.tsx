@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { attendee, attendeeHistory } from "@/types/users";
+import { attendee } from "@/types/users";
 import { fetchAttendees, fetchRSVPs } from "@/db/event_queries";
 import { AttendanceChart } from "@/components/attendence";
 import { GuestTypeChart } from "@/components/guestType";
@@ -65,9 +65,9 @@ export default function Home() {
     const loadData = async () => {
       try {
         const events = [
-          "Boba and Blockchains", // Newest (index 0)
-          "Onchain Use Cases w Patrick", // Middle (index 1)
-          "Blockchain 101", // Oldest (index 2)
+          "Boba and Blockchains",
+          "Onchain Use Cases w Patrick",
+          "Blockchain 101",
         ];
 
         const results = await Promise.all([
@@ -77,14 +77,10 @@ export default function Home() {
           fetchRSVPs(events[1]),
           fetchAttendees(events[2]),
           fetchRSVPs(events[2]),
-          getRecurring(events[2], []), // Blockchain 101 - first event, no previous events
-          getRecurring(events[1], [events[2]]), // Onchain - check against Blockchain 101
-          getRecurring(events[0], [events[1], events[2]]), // Boba - check against both previous
+          getRecurring(events[2], []),
+          getRecurring(events[1], [events[2]]),
+          getRecurring(events[0], [events[1], events[2]]),
         ]);
-
-        console.log(results[6]);
-        console.log(results[7]);
-        console.log(results[8]);
 
         const attendeesByEvent: Record<string, attendee[]> = {};
         const rsvpsByEvent: Record<string, attendee[]> = {};
@@ -118,7 +114,6 @@ export default function Home() {
             !allAttendees.some((attendee) => attendee.api_id === rsvp.api_id)
         );
 
-        // Update state with the event-specific data
         setAttendeesByEvent(attendeesByEvent);
         setRsvpsByEvent(rsvpsByEvent);
         setAttendees(allAttendees);
@@ -130,15 +125,14 @@ export default function Home() {
           { new: number; recurring: number; recurringDetails?: attendee[] }
         >();
 
-        // Process recurring data
-        const recurringEvent1 = results[8]; // Boba - recurring from both previous events
-        const recurringEvent2 = results[7]; // Onchain - recurring from Blockchain 101
-        const recurringEvent3 = results[6]; // Blockchain 101 - first event, all new
+        const recurringEvent1 = results[8];
+        const recurringEvent2 = results[7];
+        const recurringEvent3 = results[6];
 
         const recurringByEvent = {
-          [events[0]]: recurringEvent1, // Boba and Blockchains
-          [events[1]]: recurringEvent2, // Onchain Use Cases
-          [events[2]]: recurringEvent3, // Blockchain 101
+          [events[0]]: recurringEvent1,
+          [events[1]]: recurringEvent2,
+          [events[2]]: recurringEvent3,
         };
 
         events.forEach((event, index) => {
@@ -296,7 +290,6 @@ export default function Home() {
         });
         setTimeDistributionByEvent(distributionByEvent);
 
-        // Calculate punctuality stats
         const calculatePunctuality = (attendees: attendee[]) => {
           const stats = {
             onTime: 0,
@@ -330,10 +323,8 @@ export default function Home() {
           return stats;
         };
 
-        // Calculate overall punctuality
         const overallPunctuality = calculatePunctuality(allAttendees);
 
-        // Calculate per-event punctuality
         const eventPunctuality: Record<
           string,
           { onTime: number; late: number }
@@ -374,6 +365,7 @@ export default function Home() {
               attendees={attendees}
               rsvpsByEvent={rsvpsByEvent}
               attendeesByEvent={attendeesByEvent}
+              totalNewMembers={totalNewMembers}
               totalRecurringMembers={totalRecurringMembers}
               attendanceStats={attendanceStats}
               punctualityStats={punctualityStats}
