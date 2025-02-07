@@ -1,5 +1,5 @@
 import { Users, UserCheck, UserPlus, Repeat, Clock } from "lucide-react";
-import { attendee, attendeeHistory } from "@/types/users";
+import { attendee } from "@/types/users";
 import { StatCard } from "./statsCard";
 
 interface StatsCardsWidgetProps {

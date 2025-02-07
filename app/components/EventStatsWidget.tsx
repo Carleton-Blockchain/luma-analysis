@@ -1,7 +1,7 @@
 import { Users, UserCheck, UserPlus, Repeat, Clock } from "lucide-react";
-import { StatCard } from "./statsCard";
 import { CheckInDistribution } from "./check-in-distribution";
 import { attendee } from "@/types/users";
+import { StatCard } from "./statsCard";
 
 interface EventStatsWidgetProps {
   event: string;
@@ -11,7 +11,7 @@ interface EventStatsWidgetProps {
     | {
         new: number;
         recurring: number;
-        recurringDetails: any[];
+        recurringDetails: string[];
       }
     | undefined;
   attendanceStats: {

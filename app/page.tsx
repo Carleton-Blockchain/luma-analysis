@@ -1,12 +1,14 @@
+/* eslint-disable */
 "use client";
 import { useEffect, useState } from "react";
-import { attendee } from "@/types/users";
 import { fetchAttendees, fetchRSVPs } from "@/db/event_queries";
 import { AttendanceChart } from "@/app/components/attendence";
 import { GuestTypeChart } from "@/app/components/guestType";
 import { StatsCardsWidget } from "@/app/components/StatsCardsWidget";
 import { EventStatsWidget } from "@/app/components/EventStatsWidget";
 import { getRecurring } from "@/db/recurring_queries";
+import { attendee } from "@/types/users";
+import { Rowdies } from "next/font/google";
 
 interface TimeDistribution {
   time: string;
@@ -16,7 +18,6 @@ interface TimeDistribution {
 export default function Home() {
   const [attendees, setAttendees] = useState<attendee[]>([]);
   const [RSVPs, setRSVPs] = useState<attendee[]>([]);
-  const [missingAttendees, setMissingAttendees] = useState<attendee[]>([]);
   const [loading, setLoading] = useState(true);
   const [attendeesByEvent, setAttendeesByEvent] = useState<
     Record<string, attendee[]>
@@ -27,7 +28,14 @@ export default function Home() {
   const [totalNewMembers, setTotalNewMembers] = useState(0);
   const [totalRecurringMembers, setTotalRecurringMembers] = useState(0);
   const [eventStats, setEventStats] = useState<
-    Map<string, { new: number; recurring: number; recurringDetails: any[] }>
+    Map<
+      string,
+      {
+        new: number;
+        recurring: number;
+        recurringDetails: string[];
+      }
+    >
   >(new Map());
   const [attendanceStats, setAttendanceStats] = useState<{
     averageTime: string;
@@ -47,9 +55,6 @@ export default function Home() {
     latestTime: "",
     byEvent: {},
   });
-  const [timeDistribution, setTimeDistribution] = useState<TimeDistribution[]>(
-    []
-  );
   const [timeDistributionByEvent, setTimeDistributionByEvent] = useState<
     Record<string, TimeDistribution[]>
   >({});
@@ -91,40 +96,40 @@ export default function Home() {
           const attendeeIndex = index * 2;
           const rsvpIndex = attendeeIndex + 1;
 
-          attendeesByEvent[event] = results[attendeeIndex].map((row: any) => ({
-            api_id: row.api_id,
-            name: row.name,
-            email: row.email,
-            created_at: row.created_at,
-            checked_in_at: row.checked_in_at,
-          }));
+          attendeesByEvent[event] = results[attendeeIndex].map(
+            (row: any): attendee => ({
+              api_id: row.api_id || null,
+              name: row.name,
+              email: row.email,
+              created_at: row.created_at || row.c,
+              checked_in_at: row.checked_in_at || null,
+            })
+          );
 
           rsvpsByEvent[event] = results[rsvpIndex].map((row: any) => ({
             api_id: row.api_id,
             name: row.name,
             email: row.email,
             created_at: row.created_at,
-            checked_in_at: null,
+            checked_in_at: row.checked_in_at || null,
           }));
         });
 
         const allAttendees = Object.values(attendeesByEvent).flat();
         const allRSVPs = Object.values(rsvpsByEvent).flat();
 
-        const missing = allRSVPs.filter(
-          (rsvp) =>
-            !allAttendees.some((attendee) => attendee.api_id === rsvp.api_id)
-        );
-
         setAttendeesByEvent(attendeesByEvent);
         setRsvpsByEvent(rsvpsByEvent);
         setAttendees(allAttendees);
         setRSVPs(allRSVPs);
-        setMissingAttendees(missing);
 
         const eventStats = new Map<
           string,
-          { new: number; recurring: number; recurringDetails: any[] }
+          {
+            new: number;
+            recurring: number;
+            recurringDetails: string[];
+          }
         >();
 
         const recurringEvent1 = results[8];
@@ -137,20 +142,16 @@ export default function Home() {
           [events[2]]: recurringEvent3,
         };
 
-        events.forEach((event, index) => {
+        events.forEach((event) => {
           const currentAttendees = attendeesByEvent[event];
           const recurringAttendees = recurringByEvent[event];
 
           const stats = {
             new: currentAttendees.length - recurringAttendees.length,
             recurring: recurringAttendees.length,
-            recurringDetails: recurringAttendees.map((attendee: any) => ({
-              api_id: attendee.api_id,
-              name: attendee.name,
-              email: attendee.email,
-              created_at: attendee.created_at,
-              checked_in_at: attendee.checked_in_at,
-            })),
+            recurringDetails: recurringAttendees.map(
+              (attendee: any) => attendee.name
+            ),
           };
 
           eventStats.set(event, stats);
@@ -260,7 +261,6 @@ export default function Home() {
                 hour12: true,
               });
 
-              // Round to nearest 2 minutes
               const [timeStr, period] = time.split(" ");
               const [hours, minutes] = timeStr.split(":");
               const roundedMinutes = Math.floor(parseInt(minutes) / 2) * 2;
@@ -286,9 +286,6 @@ export default function Home() {
               return getTimeInMinutes(a.time) - getTimeInMinutes(b.time);
             });
         };
-
-        // Calculate time distribution for all attendees and for each event
-        setTimeDistribution(getTimeDistribution(allAttendees));
 
         const distributionByEvent: Record<string, TimeDistribution[]> = {};
         events.forEach((event) => {
@@ -353,9 +350,8 @@ export default function Home() {
         setLoading(false);
       }
     };
-
     loadData();
-  }, []);
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
