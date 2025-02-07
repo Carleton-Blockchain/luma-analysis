@@ -1,6 +1,6 @@
 "use client";
 import { Users, UserCheck, UserPlus, Repeat, Clock } from "lucide-react";
-import { StatCard } from "@/components/statsCard";
+import { StatCard } from "@/app/components/statsCard";
 import { attendee } from "@/types/users";
 
 interface StatsCardGridProps {

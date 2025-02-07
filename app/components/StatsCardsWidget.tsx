@@ -1,12 +1,13 @@
 import { Users, UserCheck, UserPlus, Repeat, Clock } from "lucide-react";
-import { StatCard } from "@/components/statsCard";
 import { attendee, attendeeHistory } from "@/types/users";
+import { StatCard } from "./statsCard";
 
 interface StatsCardsWidgetProps {
   RSVPs: attendee[];
   attendees: attendee[];
   rsvpsByEvent: Record<string, attendee[]>;
   attendeesByEvent: Record<string, attendee[]>;
+  totalNewMembers: number;
   totalRecurringMembers: number;
   attendanceStats: {
     averageTime: string;

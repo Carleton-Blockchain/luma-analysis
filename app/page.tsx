@@ -2,11 +2,16 @@
 import { useEffect, useState } from "react";
 import { attendee } from "@/types/users";
 import { fetchAttendees, fetchRSVPs } from "@/db/event_queries";
-import { AttendanceChart } from "@/components/attendence";
-import { GuestTypeChart } from "@/components/guestType";
-import { StatsCardsWidget } from "@/components/StatsCardsWidget";
-import { EventStatsWidget } from "@/components/EventStatsWidget";
+import { AttendanceChart } from "@/app/components/attendence";
+import { GuestTypeChart } from "@/app/components/guestType";
+import { StatsCardsWidget } from "@/app/components/StatsCardsWidget";
+import { EventStatsWidget } from "@/app/components/EventStatsWidget";
 import { getRecurring } from "@/db/recurring_queries";
+
+interface TimeDistribution {
+  time: string;
+  count: number;
+}
 
 export default function Home() {
   const [attendees, setAttendees] = useState<attendee[]>([]);
@@ -22,10 +27,7 @@ export default function Home() {
   const [totalNewMembers, setTotalNewMembers] = useState(0);
   const [totalRecurringMembers, setTotalRecurringMembers] = useState(0);
   const [eventStats, setEventStats] = useState<
-    Map<
-      string,
-      { new: number; recurring: number; recurringDetails?: attendee[] }
-    >
+    Map<string, { new: number; recurring: number; recurringDetails: any[] }>
   >(new Map());
   const [attendanceStats, setAttendanceStats] = useState<{
     averageTime: string;
@@ -122,7 +124,7 @@ export default function Home() {
 
         const eventStats = new Map<
           string,
-          { new: number; recurring: number; recurringDetails?: attendee[] }
+          { new: number; recurring: number; recurringDetails: any[] }
         >();
 
         const recurringEvent1 = results[8];
@@ -142,7 +144,13 @@ export default function Home() {
           const stats = {
             new: currentAttendees.length - recurringAttendees.length,
             recurring: recurringAttendees.length,
-            recurringDetails: recurringAttendees,
+            recurringDetails: recurringAttendees.map((attendee: any) => ({
+              api_id: attendee.api_id,
+              name: attendee.name,
+              email: attendee.email,
+              created_at: attendee.created_at,
+              checked_in_at: attendee.checked_in_at,
+            })),
           };
 
           eventStats.set(event, stats);

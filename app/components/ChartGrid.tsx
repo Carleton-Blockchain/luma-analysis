@@ -1,5 +1,5 @@
-import { GuestTypeChart } from "@/components/guestType";
-import { AttendanceChart } from "@/components/attendence";
+import { GuestTypeChart } from "@/app/components/guestType";
+import { AttendanceChart } from "@/app/components/attendence";
 import { attendee } from "@/types/users";
 
 interface ChartGridProps {
