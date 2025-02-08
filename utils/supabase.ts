@@ -7,7 +7,14 @@ const redirectUrl = "https://dashboard.carletonblockchain.ca";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    redirectTo: redirectUrl,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+  global: {
+    headers: {
+      "x-application-name": "carleton-blockchain-dashboard",
+    },
   },
 });
 
