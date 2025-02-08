@@ -18,7 +18,7 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_APP_URL,
+          emailRedirectTo: "https://dashboard.carletonblockchain.ca",
         },
       });
 
