@@ -10,7 +10,6 @@ import { EventStatsWidget } from "./components/EventStatsWidget";
 import { AttendanceChart } from "./components/attendence";
 import { Session } from "@supabase/supabase-js";
 
-
 const ALLOWED_EMAILS = ["rodneyshenn@gmail.com", "alvinay73@gmail.com"];
 
 export default function Home() {
@@ -40,6 +39,7 @@ export default function Home() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+
       if (!session) {
         router.push("/login");
       }
