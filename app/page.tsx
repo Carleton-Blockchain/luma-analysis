@@ -20,6 +20,15 @@ export default function Home() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
+        // Check if we're in production and not already on the login page
+        if (
+          process.env.NODE_ENV === "production" &&
+          window.location.pathname !== "/login"
+        ) {
+          window.location.href =
+            "https://dashboard.carletonblockchain.ca/login";
+          return;
+        }
         router.push("/login");
         return;
       }
@@ -27,6 +36,11 @@ export default function Home() {
       const userEmail = session.user?.email;
       if (!userEmail || !ALLOWED_EMAILS.includes(userEmail)) {
         supabase.auth.signOut();
+        if (process.env.NODE_ENV === "production") {
+          window.location.href =
+            "https://dashboard.carletonblockchain.ca/login";
+          return;
+        }
         router.push("/login");
         return;
       }
