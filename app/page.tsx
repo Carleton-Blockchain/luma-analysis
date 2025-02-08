@@ -8,24 +8,23 @@ import { StatsCardsWidget } from "./components/StatsCardsWidget";
 import { GuestTypeChart } from "./components/guestType";
 import { EventStatsWidget } from "./components/EventStatsWidget";
 import { AttendanceChart } from "./components/attendence";
+import { Session } from "@supabase/supabase-js";
 
-// Add allowed emails
+
 const ALLOWED_EMAILS = ["rodneyshenn@gmail.com", "alvinay73@gmail.com"];
 
 export default function Home() {
   const router = useRouter();
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<Session | null>(null);
   const { loading, error, data } = useAnalytics();
 
   useEffect(() => {
-    // Check authentication status
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         router.push("/login");
         return;
       }
 
-      // Check if email is allowed
       const userEmail = session.user?.email;
       if (!userEmail || !ALLOWED_EMAILS.includes(userEmail)) {
         supabase.auth.signOut();
