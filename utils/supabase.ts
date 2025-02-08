@@ -1,13 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-if (!supabaseUrl) throw new Error("Missing SUPABASE_URL");
-if (!supabaseKey) throw new Error("Missing SUPABASE_KEY");
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    redirectTo: process.env.NEXT_PUBLIC_APP_URL,
+  },
+});
 
 console.log("Connected to Supabase successfully!");
