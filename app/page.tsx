@@ -10,17 +10,18 @@ import { EventStatsWidget } from "./components/EventStatsWidget";
 import { AttendanceChart } from "./components/attendence";
 import { Session } from "@supabase/supabase-js";
 
-const ALLOWED_EMAILS = ["rodneyshenn@gmail.com", "alvinay73@gmail.com"];
+// const ALLOWED_EMAILS = ["rodneyshenn@gmail.com"];
 
 export default function Home() {
   const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
+  // const [session, setSession] = useState<Session | null>(null);
   const { loading, error, data } = useAnalytics();
 
+  // Comment out the entire auth useEffect
+  /*
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        // Check if we're in production and not already on the login page
         if (
           process.env.NODE_ENV === "production" &&
           window.location.pathname !== "/login"
@@ -61,10 +62,14 @@ export default function Home() {
 
     return () => subscription.unsubscribe();
   }, [router]);
+  */
 
+  // Comment out the session check
+  /*
   if (!session) {
     return <div>Redirecting to login...</div>;
   }
+  */
 
   if (loading) {
     return <div>Loading...</div>;
